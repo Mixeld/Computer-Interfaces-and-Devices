@@ -2,7 +2,9 @@
 #include <iostream>
 #include <string>
 
-define _WIN32_WINNT 0x0600 //указываем что мы используем Vista+ систему
+#define _WIN32_WINNT 0x0600 //указываем что мы используем Vista+ систему
+
+using namespace std;
 
 void PrintPowerStatus(const SYSTEM_POWER_STATUS& status) {
     cout << "--- Статус питания ---" << endl;
