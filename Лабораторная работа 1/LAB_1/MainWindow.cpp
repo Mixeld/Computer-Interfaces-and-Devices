@@ -1,16 +1,14 @@
 #include "MainWindow.h"
-#include "SettingsWindow.h"
 #include "Notifications.h"
 #include "PowerMonitor.h"
 #include "Reports.h"
+#include "SettingsDialog.h"   // ← Qt-окно настроек
 #include <strsafe.h>
 
 //========== ГЛАВНОЕ ОКНО ==========
 
-//Оконная процедура
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        //Создание окна - добавляем иконку в трей
         case WM_CREATE: {
             nid.cbSize = sizeof(NOTIFYICONDATAW);
             nid.hWnd = hwnd;
@@ -24,24 +22,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             Shell_NotifyIconW(NIM_ADD, &nid);
             ShowNotification(L"Лабораторная работа 1", L"Приложение запущено!");
 
-            //Запускаем таймер на 2 секунды (2000 мс)
             SetTimer(hwnd, 1, 2000, NULL);
-
             break;
         }
 
-        //Обработка кликов по иконке в трее
         case WM_TRAY_NOTIFY: {
             if (lParam == WM_LBUTTONDBLCLK) {
-                //Двойной клик - показываем статус
                 ShowPowerStatusNotification();
             } else if (lParam == WM_RBUTTONUP) {
-                //Правый клик - контекстное меню
                 POINT pt;
                 GetCursorPos(&pt);
                 HMENU hMenu = CreatePopupMenu();
 
-                //Добавляем пункты меню
                 AppendMenuW(hMenu, MF_STRING, ID_TRAY_STATUS,   L"Показать статус");
                 AppendMenuW(hMenu, MF_STRING, ID_TRAY_REPORT,   L"Сохранить отчет");
                 AppendMenuW(hMenu, MF_STRING, ID_TRAY_SETTINGS, L"Настройки");
@@ -56,7 +48,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
         }
 
-        //Обработчик таймера
         case WM_TIMER: {
             if (wParam == 1) {
                 CheckPowerStatus(hwnd);
@@ -64,37 +55,31 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
         }
 
-        //Обработка команд из меню
         case WM_COMMAND: {
             switch (LOWORD(wParam)) {
                 case ID_TRAY_EXIT:
-                    //Выход из программы
-                    g_isMonitoring = false;  //Останавливаем поток
+                    g_isMonitoring = false;
                     Shell_NotifyIconW(NIM_DELETE, &nid);
                     PostQuitMessage(0);
                     break;
 
                 case ID_TRAY_STATUS:
-                    //Показать статус питания
                     ShowPowerStatusNotification();
                     break;
 
                 case ID_TRAY_REPORT:
-                    //Сохранить отчет сейчас
                     SaveReport();
                     break;
 
                 case ID_TRAY_SETTINGS:
-                    //Открыть окно настроек
-                    OpenSettingsWindow(GetModuleHandle(NULL));
+                    OpenQtSettingsWindow();   // ← Qt вместо WinAPI
                     break;
             }
             break;
         }
 
-        //Закрываем окно через Alt+F4 или крестик
         case WM_DESTROY: {
-            g_isMonitoring = false;  //Останавливаем поток
+            g_isMonitoring = false;
             Shell_NotifyIconW(NIM_DELETE, &nid);
             PostQuitMessage(0);
             break;

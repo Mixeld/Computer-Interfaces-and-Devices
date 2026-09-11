@@ -3,10 +3,10 @@
 
 #include "Globals.h"
 
-//Функция проверки питания
+// Функция проверки питания
 void CheckPowerStatus(HWND hwnd);
 
-//Функция показа статуса питания
+// Функция показа статуса питания
 void ShowPowerStatusNotification();
 
 #endif // POWERMONITOR_H

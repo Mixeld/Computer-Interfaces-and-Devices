@@ -7,19 +7,18 @@ using namespace std;
 
 //========== ФУНКЦИИ МОНИТОРИНГА ПИТАНИЯ ==========
 
-//Функция проверки питания
 void CheckPowerStatus(HWND hwnd) {
     SYSTEM_POWER_STATUS status;
 
     if (!GetSystemPowerStatus(&status)) {
-        return; //Если статус не получили то выходим
+        return;
     }
 
     bool Now_ACOnline  = (status.ACLineStatus == 1);
     int  batteryPercent = status.BatteryLifePercent;
     bool Charging      = (status.BatteryFlag & 8) != 0;
 
-    //1. Проверяем подключение ЗУ
+    // 1. Проверяем подключение ЗУ
     if (Now_ACOnline != currentState.ACOnline) {
         if (Now_ACOnline) {
             ShowNotification(L"Питание", L"Зарядка подключена");
@@ -31,9 +30,7 @@ void CheckPowerStatus(HWND hwnd) {
         currentState.ACOnline = Now_ACOnline;
     }
 
-    //2. Проверяем критический заряд (используем настройку g_criticalThreshold)
-    // БАГФИКС: раньше при некорректно загруженном пороге (0) уведомление не показывалось.
-    // Теперь порог гарантированно валиден (>0) благодаря исправлению LoadSettings.
+    // 2. Критический заряд
     bool Now_Critical_Charge = (batteryPercent != 255 && batteryPercent <= g_criticalThreshold);
 
     if (Now_Critical_Charge && !currentState.Critical_Charge) {
@@ -43,10 +40,10 @@ void CheckPowerStatus(HWND hwnd) {
         SaveEventToLog(wstring(L"Критический заряд: ") + to_wstring(batteryPercent) + L"%");
         currentState.Critical_Charge = true;
     } else if (!Now_Critical_Charge) {
-        currentState.Critical_Charge = false;   //Если заряд стал выше порога
+        currentState.Critical_Charge = false;
     }
 
-    //3. Проверяем полную зарядку (100%)
+    // 3. Полная зарядка
     bool Now_Full_Charge = (batteryPercent >= 100 && batteryPercent != 255);
 
     if (Now_Full_Charge && !currentState.Full_Charge && Charging) {
@@ -60,7 +57,6 @@ void CheckPowerStatus(HWND hwnd) {
     currentState.status = status;
 }
 
-//Функция показа статуса питания
 void ShowPowerStatusNotification() {
     SYSTEM_POWER_STATUS status;
 

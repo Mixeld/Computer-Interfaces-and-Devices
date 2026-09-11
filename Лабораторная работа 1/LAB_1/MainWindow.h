@@ -3,7 +3,7 @@
 
 #include "Globals.h"
 
-//Оконная процедура
+// Оконная процедура
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #endif // MAINWINDOW_H

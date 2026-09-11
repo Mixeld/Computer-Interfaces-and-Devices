@@ -3,7 +3,7 @@
 // Определения глобальных переменных
 NOTIFYICONDATAW nid = {};
 HWND hwndMain = nullptr;
-HWND hwndSettings = nullptr;
+// HWND hwndSettings = nullptr;   // ← удалено
 
 int  g_criticalThreshold = 15;
 int  g_reportInterval = 5;

@@ -1,18 +1,17 @@
 #include "Reports.h"
 #include "Notifications.h"
-#include <powrprof.h> //Для получения схемы питания
-#include <ctime>      //Для работы со временем
-#include <thread>     //Для отдельного потока
-#include <chrono>     //Для задержек
+#include <powrprof.h>
+#include <ctime>
+#include <thread>
+#include <chrono>
 #include <cstdio>
 
-#pragma comment(lib, "powrprof.lib") //Линкуем
+#pragma comment(lib, "powrprof.lib")
 
 using namespace std;
 
 //========== ФУНКЦИИ РАБОТЫ С ОТЧЕТАМИ ==========
 
-//Функция получения текущего времени в строку
 string GetCurrentTimeString() {
     time_t now = time(nullptr);
     struct tm tstruct;
@@ -27,9 +26,8 @@ string GetCurrentTimeString() {
     return string(buf);
 }
 
-//Функция получения активной схемы питания
 string GetActivePowerScheme() {
-    GUID* activeGuid = nullptr; //Указатель на GUID, который заполнит функция
+    GUID* activeGuid = nullptr;
 
     if (PowerGetActiveScheme(NULL, &activeGuid) == ERROR_SUCCESS) {
         char str[64];
@@ -41,30 +39,23 @@ string GetActivePowerScheme() {
                  activeGuid->Data4[4], activeGuid->Data4[5],
                  activeGuid->Data4[6], activeGuid->Data4[7]);
 
-        //Освобождаем память, выделенную функцией
         LocalFree(activeGuid);
         return string(str);
     }
     return "Неизвестно";
 }
 
-//Функция получения температуры батареи (упрощенная)
 bool GetBatteryTemperature(int& temperature) {
-    //В реальном приложении здесь должен быть код через WMI
-    //Для демонстрации возвращаем примерное значение
     temperature = 25;
     return true;
 }
 
-//Функция сохранения события в лог
 void SaveEventToLog(const wstring& event) {
     wchar_t path[MAX_PATH];
     GetEnvironmentVariableW(L"USERPROFILE", path, MAX_PATH);
     wstring logPath = path;
-    // БАГФИКС: экранирование слэшей
     logPath += L"\\PowerReports\\events.log";
 
-    //Создаем папку если её нет
     wstring folderPath = logPath.substr(0, logPath.find_last_of(L'\\'));
     CreateDirectoryW(folderPath.c_str(), NULL);
 
@@ -77,7 +68,6 @@ void SaveEventToLog(const wstring& event) {
         string timeStr = GetCurrentTimeString();
         string content = timeStr + " - ";
 
-        //Конвертируем wstring в string через WinAPI
         int len = WideCharToMultiByte(CP_ACP, 0, event.c_str(), -1, NULL, 0, NULL, NULL);
         if (len > 0) {
             string buffer(len - 1, 0);
@@ -92,19 +82,14 @@ void SaveEventToLog(const wstring& event) {
     }
 }
 
-//Функция сохранения отчета
 void SaveReport() {
-    //Получаем путь к папке отчетов
     wchar_t path[MAX_PATH];
     GetEnvironmentVariableW(L"USERPROFILE", path, MAX_PATH);
     wstring reportsPath = path;
-    // БАГФИКС: экранирование слэшей
     reportsPath += L"\\PowerReports\\";
 
-    //Создаем папку если её нет
     CreateDirectoryW(reportsPath.c_str(), NULL);
 
-    //Формируем имя файла с датой
     time_t now = time(nullptr);
     struct tm tstruct;
     struct tm* ptm = localtime(&now);
@@ -119,19 +104,16 @@ void SaveReport() {
     wstring filename = reportsPath;
     filename += L"power_report_";
 
-    //Конвертируем char* в wchar_t* через WinAPI
     wchar_t wtimeBuf[80] = {0};
     MultiByteToWideChar(CP_ACP, 0, timeBuf, -1, wtimeBuf, 80);
     filename += wtimeBuf;
     filename += L".txt";
 
-    //Получаем статус питания
     SYSTEM_POWER_STATUS status;
     if (!GetSystemPowerStatus(&status)) {
         return;
     }
 
-    //Открываем файл для записи
     HANDLE hFile = CreateFileW(filename.c_str(), GENERIC_WRITE, 0,
                                NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
@@ -139,44 +121,36 @@ void SaveReport() {
         return;
     }
 
-    //Формируем содержимое отчета
     string content = "=== ОТЧЕТ О СОСТОЯНИИ ПИТАНИЯ ===\r\n";
     content += "Время: " + GetCurrentTimeString() + "\r\n";
     content += "----------------------------------------\r\n";
 
-    //Уровень заряда
     if (status.BatteryLifePercent != 255) {
         content += "Уровень заряда: " + to_string((int)status.BatteryLifePercent) + "%\r\n";
     } else {
         content += "Уровень заряда: Неизвестно\r\n";
     }
 
-    //Источник питания
     switch (status.ACLineStatus) {
         case 0:  content += "Источник питания: Батарея\r\n"; break;
         case 1:  content += "Источник питания: Сеть\r\n";    break;
         default: content += "Источник питания: Неизвестно\r\n";
     }
 
-    //Состояние зарядки
     if (status.BatteryFlag & 8) {
         content += "Состояние: Заряжается\r\n";
     } else {
         content += "Состояние: Не заряжается\r\n";
     }
 
-    //Оставшееся время
-    // БАГФИКС: BatteryLifeTime имеет тип DWORD; неизвестное значение = 0xFFFFFFFF
     if (status.BatteryLifeTime != (DWORD)-1 && status.BatteryLifeTime != 0) {
         int hours = status.BatteryLifeTime / 3600;
         int minutes = (status.BatteryLifeTime % 3600) / 60;
         content += "Оставшееся время: " + to_string(hours) + "ч " + to_string(minutes) + "мин\r\n";
     }
 
-    //Активная схема питания
     content += "Активная схема питания: " + GetActivePowerScheme() + "\r\n";
 
-    //Температура батареи
     int temperature = 0;
     if (GetBatteryTemperature(temperature)) {
         content += "Температура батареи: " + to_string(temperature) + "°C\r\n";
@@ -186,28 +160,23 @@ void SaveReport() {
     content += "Порог критического заряда: " + to_string(g_criticalThreshold) + "%\r\n";
     content += "Интервал отчетов: "         + to_string(g_reportInterval)    + " мин\r\n";
 
-    //Записываем в файл
     DWORD bytesWritten = 0;
     WriteFile(hFile, content.c_str(), (DWORD)content.length(), &bytesWritten, NULL);
     CloseHandle(hFile);
 
-    //Показываем уведомление
     wchar_t msg[256];
     wsprintfW(msg, L"Отчет сохранен в папке PowerReports");
     ShowNotification(L"Отчет сохранен", msg, NIIF_INFO);
 }
 
-//Функция потока для автоматического сохранения отчетов
 void ReportThread() {
     int counter = 0;
 
     while (g_isMonitoring) {
-        //Спим 1 минуту
         this_thread::sleep_for(chrono::minutes(1));
         if (!g_isMonitoring) break;
         counter++;
 
-        //Если прошло g_reportInterval минут - сохраняем отчет
         if (counter >= g_reportInterval) {
             SaveReport();
             counter = 0;
