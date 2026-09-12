@@ -9,6 +9,8 @@ std::string GetActivePowerScheme();
 bool GetBatteryTemperature(int& temperature);
 void SaveEventToLog(const std::wstring& event);
 void SaveReport();
-void ReportThread();
+
+// Фоновый поток отчётов (использует QThread).
+class ReportWorker;
 
 #endif // REPORTS_H

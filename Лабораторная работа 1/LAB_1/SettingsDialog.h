@@ -4,7 +4,9 @@
 #include <QDialog>
 
 class QSpinBox;
-class QPushButton;
+class QTimer;
+class QLabel;
+class BatteryIndicator;
 
 class SettingsDialog : public QDialog {
     Q_OBJECT
@@ -15,16 +17,15 @@ public:
 
 private slots:
     void onOkClicked();
-    void onCancelClicked();
+    void onUpdateBattery();
 
 private:
-    QSpinBox*    m_thresholdSpin;
-    QSpinBox*    m_intervalSpin;
-    QPushButton* m_okButton;
-    QPushButton* m_cancelButton;
+    QLabel*           m_titleLabel;
+    QLabel*           m_statusLabel;
+    BatteryIndicator* m_battery;
+    QSpinBox*         m_thresholdSpin;
+    QSpinBox*         m_intervalSpin;
+    QTimer*           m_batteryTimer;
 };
-
-// Запускает Qt-окно настроек в отдельном потоке.
-void OpenQtSettingsWindow();
 
 #endif // SETTINGSDIALOG_H

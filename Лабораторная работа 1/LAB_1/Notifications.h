@@ -1,12 +1,18 @@
 #ifndef NOTIFICATIONS_H
 #define NOTIFICATIONS_H
 
-#include "Globals.h"
-#include <string>
+#include <QString>
 
-// Функция показа уведомлений
-void ShowNotification(const std::wstring& title,
-                      const std::wstring& message,
-                      int iconType = NIIF_INFO);
+class QSystemTrayIcon;
+
+// Глобальный указатель на трей — устанавливается один раз в TrayApp.
+// Функции уведомлений используют его для показа сообщений.
+void SetTrayIcon(QSystemTrayIcon* tray);
+
+// Показать уведомление через трей.
+// iconType: QSystemTrayIcon::Information / Warning / Critical
+void ShowNotification(const QString& title,
+                      const QString& message,
+                      int iconType = 1 /* Information */);
 
 #endif // NOTIFICATIONS_H

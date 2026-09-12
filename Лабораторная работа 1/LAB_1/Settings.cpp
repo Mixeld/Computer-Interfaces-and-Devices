@@ -3,8 +3,6 @@
 
 using namespace std;
 
-//========== ФУНКЦИИ РАБОТЫ С НАСТРОЙКАМИ ==========
-
 wstring GetConfigPath() {
     wchar_t path[MAX_PATH];
     GetEnvironmentVariableW(L"USERPROFILE", path, MAX_PATH);

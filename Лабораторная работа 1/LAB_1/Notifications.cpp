@@ -1,18 +1,16 @@
 #include "Notifications.h"
-#include <strsafe.h>
+#include <QSystemTrayIcon>
 
-using namespace std;
+static QSystemTrayIcon* g_tray = nullptr;
 
-//========== ФУНКЦИИ РАБОТЫ С УВЕДОМЛЕНИЯМИ ==========
+void SetTrayIcon(QSystemTrayIcon* tray) {
+    g_tray = tray;
+}
 
-void ShowNotification(const wstring& title, const wstring& message, int iconType) {
-    NOTIFYICONDATAW nidNotify = nid;
-    nidNotify.uFlags = NIF_INFO;
-    nidNotify.dwInfoFlags = iconType;
-    nidNotify.uTimeout = 5000;
+void ShowNotification(const QString& title, const QString& message, int iconType) {
+    if (!g_tray) return;
 
-    StringCchCopyW(nidNotify.szInfoTitle, 64,  title.c_str());
-    StringCchCopyW(nidNotify.szInfo,      256, message.c_str());
+    QSystemTrayIcon::MessageIcon icon = static_cast<QSystemTrayIcon::MessageIcon>(iconType);
 
-    Shell_NotifyIconW(NIM_MODIFY, &nidNotify);
+    g_tray->showMessage(title, message, icon, 5000);
 }

@@ -1,56 +1,58 @@
 #include "PowerMonitor.h"
 #include "Notifications.h"
 #include "Reports.h"
+#include <QSystemTrayIcon>
 #include <string>
 
 using namespace std;
 
-//========== ФУНКЦИИ МОНИТОРИНГА ПИТАНИЯ ==========
-
-void CheckPowerStatus(HWND hwnd) {
+void CheckPowerStatus() {
     SYSTEM_POWER_STATUS status;
+    if (!GetSystemPowerStatus(&status)) return;
 
-    if (!GetSystemPowerStatus(&status)) {
-        return;
-    }
+    bool nowAC       = (status.ACLineStatus == 1);
+    int  percent     = status.BatteryLifePercent;
+    bool charging    = (status.BatteryFlag & 8) != 0;
 
-    bool Now_ACOnline  = (status.ACLineStatus == 1);
-    int  batteryPercent = status.BatteryLifePercent;
-    bool Charging      = (status.BatteryFlag & 8) != 0;
-
-    // 1. Проверяем подключение ЗУ
-    if (Now_ACOnline != currentState.ACOnline) {
-        if (Now_ACOnline) {
-            ShowNotification(L"Питание", L"Зарядка подключена");
+    // 1. Подключение/отключение ЗУ
+    if (nowAC != currentState.ACOnline) {
+        if (nowAC) {
+            ShowNotification(QStringLiteral("Питание"),
+                             QStringLiteral("Зарядка подключена"),
+                             QSystemTrayIcon::Information);
             SaveEventToLog(L"Зарядка подключена");
         } else {
-            ShowNotification(L"Питание", L"Зарядка отключена");
+            ShowNotification(QStringLiteral("Питание"),
+                             QStringLiteral("Зарядка отключена"),
+                             QSystemTrayIcon::Information);
             SaveEventToLog(L"Зарядка отключена");
         }
-        currentState.ACOnline = Now_ACOnline;
+        currentState.ACOnline = nowAC;
     }
 
     // 2. Критический заряд
-    bool Now_Critical_Charge = (batteryPercent != 255 && batteryPercent <= g_criticalThreshold);
+    bool nowCritical = (percent != 255 && percent <= g_criticalThreshold);
 
-    if (Now_Critical_Charge && !currentState.Critical_Charge) {
-        wchar_t msg[256];
-        wsprintfW(msg, L"Критический заряд!! %d%%", batteryPercent);
-        ShowNotification(L"Критический заряд!", msg, NIIF_WARNING);
-        SaveEventToLog(wstring(L"Критический заряд: ") + to_wstring(batteryPercent) + L"%");
+    if (nowCritical && !currentState.Critical_Charge) {
+        QString msg = QStringLiteral("Критический заряд!! %1%").arg(percent);
+        ShowNotification(QStringLiteral("Критический заряд!"), msg,
+                         QSystemTrayIcon::Warning);
+        SaveEventToLog(wstring(L"Критический заряд: ") + to_wstring(percent) + L"%");
         currentState.Critical_Charge = true;
-    } else if (!Now_Critical_Charge) {
+    } else if (!nowCritical) {
         currentState.Critical_Charge = false;
     }
 
     // 3. Полная зарядка
-    bool Now_Full_Charge = (batteryPercent >= 100 && batteryPercent != 255);
+    bool nowFull = (percent >= 100 && percent != 255);
 
-    if (Now_Full_Charge && !currentState.Full_Charge && Charging) {
-        ShowNotification(L"Зарядились йоу!!", L"Батарея полностью заряжена", NIIF_INFO);
+    if (nowFull && !currentState.Full_Charge && charging) {
+        ShowNotification(QStringLiteral("Батарея заряжена"),
+                         QStringLiteral("Батарея полностью заряжена"),
+                         QSystemTrayIcon::Information);
         SaveEventToLog(L"Батарея полностью заряжена");
         currentState.Full_Charge = true;
-    } else if (!Now_Full_Charge) {
+    } else if (!nowFull) {
         currentState.Full_Charge = false;
     }
 
@@ -59,31 +61,34 @@ void CheckPowerStatus(HWND hwnd) {
 
 void ShowPowerStatusNotification() {
     SYSTEM_POWER_STATUS status;
-
     if (!GetSystemPowerStatus(&status)) {
-        ShowNotification(L"Ошибка", L"Не удалось получить статус питания", NIIF_ERROR);
+        ShowNotification(QStringLiteral("Ошибка"),
+                         QStringLiteral("Не удалось получить статус питания"),
+                         QSystemTrayIcon::Critical);
         return;
     }
 
-    wchar_t msg[512];
     int percent = status.BatteryLifePercent;
 
-    wstring acStatus;
+    QString acStatus;
     switch (status.ACLineStatus) {
-        case 0:  acStatus = L"Отключено (батарея)"; break;
-        case 1:  acStatus = L"Подключено (сеть)";   break;
-        default: acStatus = L"Неизвестно";
+        case 0:  acStatus = QStringLiteral("Отключено (батарея)"); break;
+        case 1:  acStatus = QStringLiteral("Подключено (сеть)");   break;
+        default: acStatus = QStringLiteral("Неизвестно");
     }
 
-    wstring chargeStatus = (status.BatteryFlag & 8) ? L"Заряжается" : L"Не заряжается";
+    QString chargeStatus = (status.BatteryFlag & 8)
+                           ? QStringLiteral("Заряжается")
+                           : QStringLiteral("Не заряжается");
 
-    if (percent != 255) {
-        wsprintfW(msg, L"Уровень заряда: %d%%\nСеть: %s\nСостояние: %s\nПорог: %d%%",
-                  percent, acStatus.c_str(), chargeStatus.c_str(), g_criticalThreshold);
-    } else {
-        wsprintfW(msg, L"Уровень заряда: неизвестен\nСеть: %s\nСостояние: %s\nПорог: %d%%",
-                  acStatus.c_str(), chargeStatus.c_str(), g_criticalThreshold);
-    }
+    QString percentStr = (percent != 255)
+                         ? QStringLiteral("%1%").arg(percent)
+                         : QStringLiteral("неизвестен");
 
-    ShowNotification(L"Статус питания", msg, NIIF_INFO);
+    QString msg = QStringLiteral("Уровень заряда: %1\nСеть: %2\nСостояние: %3\nПорог: %4%")
+                      .arg(percentStr, acStatus, chargeStatus)
+                      .arg(g_criticalThreshold);
+
+    ShowNotification(QStringLiteral("Статус питания"), msg,
+                     QSystemTrayIcon::Information);
 }

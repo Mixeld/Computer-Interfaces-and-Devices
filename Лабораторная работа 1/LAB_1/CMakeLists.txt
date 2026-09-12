@@ -16,36 +16,25 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 add_executable(PRICOL
         main.cpp
         Globals.cpp
-        MainWindow.cpp
+        TrayApp.cpp
         Settings.cpp
         PowerMonitor.cpp
         Notifications.cpp
         Reports.cpp
         SettingsDialog.cpp
-        Globals.h
-        Globals.cpp
-        Notifications.h
-        Notifications.cpp
-        MainWindow.h
-        MainWindow.cpp
-        MainWindow.cpp
-        Settings.h
-        Settings.cpp
-        PowerMonitor.h
-        PowerMonitor.cpp
-        Reports.h
-        Reports.cpp
+        BatteryIndicator.cpp
 )
 
 # --- Заголовки ---
 target_sources(PRICOL PRIVATE
         Globals.h
-        MainWindow.h
+        TrayApp.h
         Settings.h
         PowerMonitor.h
         Notifications.h
         Reports.h
         SettingsDialog.h
+        BatteryIndicator.h
 )
 
 # --- Линковка: WinAPI + Qt ---
@@ -60,7 +49,7 @@ target_link_libraries(PRICOL PRIVATE
         Qt6::Widgets
 )
 
-# --- WIN32: точка входа wWinMain ---
+# --- WIN32: убираем консольное окно ---
 set_target_properties(PRICOL PROPERTIES WIN32_EXECUTABLE TRUE)
 
 if (MINGW)

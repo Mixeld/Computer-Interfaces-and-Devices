@@ -2,11 +2,12 @@
 #define POWERMONITOR_H
 
 #include "Globals.h"
+#include <QString>
 
-// Функция проверки питания
-void CheckPowerStatus(HWND hwnd);
+// Проверка состояния питания (вызывается из QTimer).
+void CheckPowerStatus();
 
-// Функция показа статуса питания
+// Показать статус питания в трее.
 void ShowPowerStatusNotification();
 
 #endif // POWERMONITOR_H
